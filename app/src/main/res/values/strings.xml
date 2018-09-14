@@ -194,4 +194,9 @@
   <string name="scheduleappointment_not_now">Not now</string>
   <string name="scheduleappointment_done">done</string>
 
+  <!-- New medical history -->
+  <string name="newmedicalhistory_save">Save patient</string>
+  <string name="newmedicalhistory_answer_no">No</string>
+  <string name="newmedicalhistory_answer_yes">Yes</string>
+  <string name="medicalhistory_heart_attack">Heart attack in past 3 years?</string>
 </resources>

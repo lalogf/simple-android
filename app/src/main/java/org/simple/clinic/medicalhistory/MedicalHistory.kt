@@ -8,6 +8,7 @@ import android.arch.persistence.room.PrimaryKey
 import android.arch.persistence.room.Query
 import io.reactivex.Flowable
 import org.simple.clinic.patient.SyncStatus
+import org.simple.clinic.util.Optional
 import org.threeten.bp.Instant
 import java.util.UUID
 
@@ -46,5 +47,8 @@ data class MedicalHistory(
 
     @Query("SELECT COUNT(uuid) FROM MedicalHistory")
     fun count(): Flowable<Int>
+
+    @Query("SELECT * FROM MedicalHistory WHERE patientUuid = :patientUuid LIMIT 1")
+    fun history(patientUuid: UUID): Flowable<Optional<MedicalHistory>>
   }
 }

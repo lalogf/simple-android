@@ -19,6 +19,7 @@ import org.simple.clinic.home.patients.PatientsModule
 import org.simple.clinic.home.patients.PatientsScreen
 import org.simple.clinic.login.applock.AppLockScreen
 import org.simple.clinic.login.pin.LoginPinScreen
+import org.simple.clinic.medicalhistory.entry.NewMedicalHistoryScreen
 import org.simple.clinic.newentry.PatientEntryScreen
 import org.simple.clinic.onboarding.OnboardingModule
 import org.simple.clinic.onboarding.OnboardingScreen
@@ -66,6 +67,7 @@ interface TheActivityComponent {
   fun inject(target: RegistrationFacilitySelectionScreen)
   fun inject(target: FacilityChangeScreen)
   fun inject(target: EnterOtpScreen)
+  fun inject(target: NewMedicalHistoryScreen)
   fun inject(target: ScheduleAppointmentSheet)
 
   @Subcomponent.Builder

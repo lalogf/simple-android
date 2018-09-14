@@ -37,10 +37,7 @@ class PatientSync @Inject constructor(
         .filter({ it.isNotEmpty() })
         .cache()
 
-    val pendingToInFlight = cachedPendingSyncPatients
-        .flatMapCompletable {
-          repository.updatePatientsSyncStatus(oldStatus = SyncStatus.PENDING, newStatus = SyncStatus.IN_FLIGHT)
-        }
+    val pendingToInFlight = repository.updatePatientsSyncStatus(oldStatus = SyncStatus.PENDING, newStatus = SyncStatus.IN_FLIGHT)
 
     val networkCall = cachedPendingSyncPatients
         .map { patients -> patients.map { it.toPayload() } }

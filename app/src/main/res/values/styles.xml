@@ -337,4 +337,15 @@
     <item name="android:paddingStart">@dimen/spacing_24</item>
     <item name="android:paddingTop">@dimen/spacing_16</item>
   </style>
+
+  <style name="Clinic.Summary" />
+
+  <style name="Clinic.Summary.CompoundButton">
+    <item name="android:background">@drawable/selector_prescribeddrug_background</item>
+    <item name="android:button">@null</item>
+    <item name="android:drawablePadding">@dimen/spacing_4</item>
+    <item name="android:gravity">center</item>
+    <item name="android:textAllCaps">false</item>
+    <item name="android:textAppearance">@style/TextAppearance.AppCompat.Widget.Button</item>
+  </style>
 </resources>

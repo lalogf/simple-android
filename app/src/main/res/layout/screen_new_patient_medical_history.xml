@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<org.simple.clinic.medicalhistory.entry.NewMedicalHistoryScreen xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:orientation="vertical">
+
+  <android.support.v7.widget.Toolbar
+    android:id="@+id/newmedicalhistory_toolbar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:navigationIcon="@drawable/ic_arrow_back_24dp"
+    app:title="Cardiovascular history " />
+
+  <android.support.v7.widget.RecyclerView
+    android:id="@+id/newmedicalhistory_questions"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    tools:listitem="@layout/list_medical_history_question" />
+
+  <FrameLayout
+    android:id="@+id/newmedicalhistory_save"
+    style="@style/Clinic.FullWidthButtonFrame"
+    android:layout_alignParentBottom="true"
+    android:background="@drawable/background_medicalhistory_save_button">
+
+    <Button
+      style="@style/Clinic.FullWidthButton"
+      android:drawableStart="@drawable/ic_done_20dp"
+      android:text="@string/newmedicalhistory_save"
+      android:textColor="@color/white" />
+  </FrameLayout>
+</org.simple.clinic.medicalhistory.entry.NewMedicalHistoryScreen>
