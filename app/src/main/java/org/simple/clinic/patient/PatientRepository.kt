@@ -93,6 +93,8 @@ class PatientRepository @Inject constructor(
           .zipWith(fuzzySearch)
           .map { (results, fuzzyResults) -> (fuzzyResults + results).distinctBy { it.uuid } }
           .compose(sortByCurrentFacility())
+
+      fuzzySearch
     }
   }
 
