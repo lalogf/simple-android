@@ -8,6 +8,7 @@ import org.simple.clinic.facility.Facility
 import org.simple.clinic.facility.FacilityPayload
 import org.simple.clinic.facility.FacilityRepository
 import org.simple.clinic.medicalhistory.MedicalHistory
+import org.simple.clinic.medicalhistory.MedicalHistory.Answer
 import org.simple.clinic.medicalhistory.sync.MedicalHistoryPayload
 import org.simple.clinic.overdue.Appointment
 import org.simple.clinic.overdue.AppointmentPayload
@@ -404,12 +405,12 @@ class TestData @Inject constructor(
   fun medicalHistory(
       uuid: UUID = UUID.randomUUID(),
       patientUuid: UUID = UUID.randomUUID(),
-      hasHadHeartAttack: Boolean = faker.bool.bool(),
-      hasHadStroke: Boolean = faker.bool.bool(),
-      hasHadKidneyDisease: Boolean = faker.bool.bool(),
-      diagnosedWithHypertension: Boolean = faker.bool.bool(),
-      isOnTreatmentForHypertension: Boolean = faker.bool.bool(),
-      hasDiabetes: Boolean = faker.bool.bool(),
+      hasHadHeartAttack: Answer = randomOfEnum(Answer::class),
+      hasHadStroke: Answer = randomOfEnum(Answer::class),
+      hasHadKidneyDisease: Answer = randomOfEnum(Answer::class),
+      diagnosedWithHypertension: Answer = randomOfEnum(Answer::class),
+      isOnTreatmentForHypertension: Answer = randomOfEnum(Answer::class),
+      hasDiabetes: Answer = randomOfEnum(Answer::class),
       syncStatus: SyncStatus = randomOfEnum(SyncStatus::class),
       createdAt: Instant = Instant.now(),
       updatedAt: Instant = Instant.now()
@@ -431,6 +432,7 @@ class TestData @Inject constructor(
   fun medicalHistoryPayload(
       uuid: UUID = UUID.randomUUID(),
       patientUuid: UUID = UUID.randomUUID(),
+      diagnosedWithHypertension:Boolean = faker.bool.bool(),
       hasHadHeartAttack: Boolean = faker.bool.bool(),
       hasHadStroke: Boolean = faker.bool.bool(),
       hasHadKidneyDisease: Boolean = faker.bool.bool(),
@@ -442,6 +444,7 @@ class TestData @Inject constructor(
     return MedicalHistoryPayload(
         uuid = uuid,
         patientUuid = patientUuid,
+        diagnosedWithHypertension = diagnosedWithHypertension,
         hasHadHeartAttack = hasHadHeartAttack,
         hasHadStroke = hasHadStroke,
         hasHadKidneyDisease = hasHadKidneyDisease,
