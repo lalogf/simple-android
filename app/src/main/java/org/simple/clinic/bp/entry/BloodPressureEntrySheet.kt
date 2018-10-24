@@ -12,6 +12,7 @@ import android.widget.TextView
 import com.jakewharton.rxbinding2.widget.RxTextView
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.rxkotlin.cast
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
 import kotterknife.bindView
@@ -21,6 +22,7 @@ import org.simple.clinic.widgets.BottomSheetActivity
 import org.simple.clinic.widgets.UiEvent
 import org.simple.clinic.widgets.setTextAndCursor
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class BloodPressureEntrySheet : BottomSheetActivity() {
@@ -89,7 +91,12 @@ class BloodPressureEntrySheet : BottomSheetActivity() {
   private fun sheetCreates(): Observable<UiEvent> {
     val patientUuid = intent.extras!!.getSerializable(KEY_UUID) as UUID
     val openAs = intent.extras!!.getSerializable(KEY_OPEN_AS) as OpenAs
-    return Observable.just(BloodPressureEntrySheetCreated(openAs, patientUuid))
+    return Observable
+        .just(BloodPressureEntrySheetCreated(openAs, patientUuid))
+        // This delay stops the race condition (?) that happens frequently with replay().refCount()
+        // in the controller. Temporary workaround until we figure out what exactly is going on.
+        .delay(100L, TimeUnit.MILLISECONDS)
+        .cast()
   }
 
   private fun systolicTextChanges() = RxTextView.textChanges(systolicEditText)
