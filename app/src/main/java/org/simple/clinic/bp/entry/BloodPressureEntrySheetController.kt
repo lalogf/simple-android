@@ -6,15 +6,16 @@ import io.reactivex.ObservableTransformer
 import io.reactivex.rxkotlin.ofType
 import io.reactivex.rxkotlin.withLatestFrom
 import org.simple.clinic.ReportAnalyticsEvents
+import org.simple.clinic.analytics.Analytics
 import org.simple.clinic.bp.BloodPressureRepository
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_DIASTOLIC_EMPTY
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_DIASTOLIC_TOO_HIGH
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_DIASTOLIC_TOO_LOW
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_SYSTOLIC_EMPTY
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_SYSTOLIC_LESS_THAN_DIASTOLIC
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_SYSTOLIC_TOO_HIGH
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.ERROR_SYSTOLIC_TOO_LOW
-import org.simple.clinic.bp.entry.BloodPressureEntrySheetController.Validation.SUCCESS
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_DIASTOLIC_EMPTY
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_DIASTOLIC_TOO_HIGH
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_DIASTOLIC_TOO_LOW
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_SYSTOLIC_EMPTY
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_SYSTOLIC_LESS_THAN_DIASTOLIC
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_SYSTOLIC_TOO_HIGH
+import org.simple.clinic.bp.entry.BloodPressureValidation.ERROR_SYSTOLIC_TOO_LOW
+import org.simple.clinic.bp.entry.BloodPressureValidation.SUCCESS
 import org.simple.clinic.bp.entry.OpenAs.NEW_BP
 import org.simple.clinic.bp.entry.OpenAs.UPDATE_BP
 import org.simple.clinic.util.exhaustive
@@ -31,13 +32,17 @@ class BloodPressureEntrySheetController @Inject constructor(
   override fun apply(events: Observable<UiEvent>): ObservableSource<UiChange> {
     val replayedEvents = events.compose(ReportAnalyticsEvents()).replay().refCount()
 
+    val transformedEvents = replayedEvents
+        .mergeWith(validateBp(events))
+
     return Observable.mergeArray(
-        automaticDiastolicFocusChanges(replayedEvents),
-        validationErrorResets(replayedEvents),
-        prefillWhenUpdatingABloodPressure(replayedEvents),
-        bpValidations(replayedEvents),
-        saveNewBp(replayedEvents),
-        updateBp(replayedEvents))
+        automaticDiastolicFocusChanges(transformedEvents),
+        validationErrorResets(transformedEvents),
+        preFillWhenUpdatingABloodPressure(transformedEvents),
+        showValidationErrors(transformedEvents),
+        reportValidationErrors(transformedEvents),
+        saveNewBp(transformedEvents),
+        updateBp(transformedEvents))
   }
 
   private fun automaticDiastolicFocusChanges(events: Observable<UiEvent>): Observable<UiChange> {
@@ -64,7 +69,7 @@ class BloodPressureEntrySheetController @Inject constructor(
     return Observable.merge(systolicChanges, diastolicChanges)
   }
 
-  private fun prefillWhenUpdatingABloodPressure(events: Observable<UiEvent>): Observable<UiChange> {
+  private fun preFillWhenUpdatingABloodPressure(events: Observable<UiEvent>): Observable<UiChange> {
     return events
         .ofType<BloodPressureEntrySheetCreated>()
         .filter { it.openAs == UPDATE_BP }
@@ -72,7 +77,7 @@ class BloodPressureEntrySheetController @Inject constructor(
         .map { bloodPressure -> { ui: Ui -> ui.updateBpMeasurements(bloodPressure.systolic, bloodPressure.diastolic) } }
   }
 
-  private fun bpValidations(events: Observable<UiEvent>): Observable<UiChange> {
+  private fun validateBp(events: Observable<UiEvent>): Observable<UiEvent> {
     val imeDoneClicks = events.ofType<BloodPressureSaveClicked>()
 
     val systolicChanges = events
@@ -84,10 +89,18 @@ class BloodPressureEntrySheetController @Inject constructor(
         .map { it.diastolic }
 
     return imeDoneClicks
-        .withLatestFrom(systolicChanges, diastolicChanges) { _, systolic, diastolic -> systolic to diastolic }
-        .map { (systolic, diastolic) ->
+        .withLatestFrom(systolicChanges, diastolicChanges)
+        .map { (_, systolic, diastolic) -> BloodPressureEntry(systolic, diastolic) }
+        .distinctUntilChanged()
+        .map { bp -> BloodPressureValidated(validateInput(bp), bp) }
+  }
+
+  private fun showValidationErrors(events: Observable<UiEvent>): Observable<UiChange> {
+    return events
+        .ofType<BloodPressureValidated>()
+        .map {
           { ui: Ui ->
-            when (validateInput(systolic, diastolic)) {
+            when (it.validation) {
               ERROR_SYSTOLIC_LESS_THAN_DIASTOLIC -> ui.showSystolicLessThanDiastolicError()
               ERROR_SYSTOLIC_TOO_HIGH -> ui.showSystolicHighError()
               ERROR_SYSTOLIC_TOO_LOW -> ui.showSystolicLowError()
@@ -103,85 +116,64 @@ class BloodPressureEntrySheetController @Inject constructor(
         }
   }
 
+  private fun reportValidationErrors(events: Observable<UiEvent>): Observable<UiChange> {
+    return events
+        .ofType<BloodPressureValidated>()
+        .flatMap {
+          Analytics.reportInputValidationError(it.analyticsName)
+          Observable.empty<UiChange>()
+        }
+  }
+
   private fun saveNewBp(events: Observable<UiEvent>): Observable<UiChange> {
-    val imeDoneClicks = events.ofType<BloodPressureSaveClicked>()
-
-    val systolicChanges = events
-        .ofType<BloodPressureSystolicTextChanged>()
-        .map { it.systolic }
-
-    val diastolicChanges = events
-        .ofType<BloodPressureDiastolicTextChanged>()
-        .map { it.diastolic }
-
-    val validBpEntry = imeDoneClicks
-        .withLatestFrom(systolicChanges, diastolicChanges) { _, systolic, diastolic -> systolic to diastolic }
-        .map { (systolic, diastolic) -> Triple(systolic, diastolic, validateInput(systolic, diastolic)) }
-        .filter { (_, _, validation) -> validation == SUCCESS }
-        .map { (systolic, diastolic, _) -> systolic to diastolic }
-
-    val patientUuid = events
+    val patientUuidStream = events
         .ofType<BloodPressureEntrySheetCreated>()
         .filter { it.openAs == NEW_BP }
         .map { it.uuid }
 
-    return imeDoneClicks
-        .withLatestFrom(validBpEntry, patientUuid) { _, (systolic, diastolic), patientId -> Triple(patientId, systolic, diastolic) }
-        .distinctUntilChanged()
-        .flatMapSingle { (patientId, systolic, diastolic) ->
+    return events
+        .ofType<BloodPressureValidated>()
+        .filter { it.validation == SUCCESS }
+        .map { it.bloodPressure }
+        .withLatestFrom(patientUuidStream)
+        .flatMapSingle { (bp, patientUuid) ->
           bloodPressureRepository
-              .saveMeasurement(
-                  patientUuid = patientId,
-                  systolic = systolic.toInt(),
-                  diastolic = diastolic.toInt()
-              )
+              .saveMeasurement(patientUuid = patientUuid, systolic = bp.systolic.toInt(), diastolic = bp.diastolic.toInt())
+              .map { { ui: Ui -> ui.setBPSavedResultAndFinish() } }
         }
-        .map { { ui: Ui -> ui.setBPSavedResultAndFinish() } }
   }
 
   private fun updateBp(events: Observable<UiEvent>): Observable<UiChange> {
-    val imeDoneClicks = events.ofType<BloodPressureSaveClicked>()
-
-    val systolicChanges = events
-        .ofType<BloodPressureSystolicTextChanged>()
-        .map { it.systolic }
-
-    val diastolicChanges = events
-        .ofType<BloodPressureDiastolicTextChanged>()
-        .map { it.diastolic }
-
-    val validBpEntry = imeDoneClicks
-        .withLatestFrom(systolicChanges, diastolicChanges) { _, systolic, diastolic -> systolic to diastolic }
-        .map { (systolic, diastolic) -> Triple(systolic, diastolic, validateInput(systolic, diastolic)) }
-        .filter { (_, _, validation) -> validation == SUCCESS }
-        .map { (systolic, diastolic, _) -> systolic to diastolic }
-
-    val bloodPressure = events
+    val savedMeasurementStream = events
         .ofType<BloodPressureEntrySheetCreated>()
         .filter { it.openAs == UPDATE_BP }
         .flatMapSingle { bloodPressureRepository.findOne(it.uuid) }
         .take(1)
 
-    return imeDoneClicks
-        .withLatestFrom(validBpEntry, bloodPressure) { _, (systolic, diastolic), savedBp -> Triple(savedBp, systolic, diastolic) }
-        .distinctUntilChanged()
-        .map { (savedBp, systolic, diastolic) -> savedBp.copy(systolic = systolic.toInt(), diastolic = diastolic.toInt()) }
-        .flatMapSingle { bloodPressureMeasurement ->
-          bloodPressureRepository.updateMeasurement(bloodPressureMeasurement)
+    return events
+        .ofType<BloodPressureValidated>()
+        .filter { it.validation == SUCCESS }
+        .map { it.bloodPressure }
+        .withLatestFrom(savedMeasurementStream)
+        .flatMapSingle { (newBp, savedMeasurement) ->
+          val updatedMeasurement = savedMeasurement.copy(systolic = newBp.systolic.toInt(), diastolic = newBp.diastolic.toInt())
+
+          bloodPressureRepository
+              .updateMeasurement(updatedMeasurement)
               .toSingleDefault({ ui: Ui -> ui.setBPSavedResultAndFinish() })
         }
   }
 
-  private fun validateInput(systolic: String, diastolic: String): Validation {
-    if (systolic.isBlank()) {
+  private fun validateInput(bloodPressure: BloodPressureEntry): BloodPressureValidation {
+    if (bloodPressure.systolic.isBlank()) {
       return ERROR_SYSTOLIC_EMPTY
     }
-    if (diastolic.isBlank()) {
+    if (bloodPressure.diastolic.isBlank()) {
       return ERROR_DIASTOLIC_EMPTY
     }
 
-    val systolicNumber = systolic.trim().toInt()
-    val diastolicNumber = diastolic.trim().toInt()
+    val systolicNumber = bloodPressure.systolic.trim().toInt()
+    val diastolicNumber = bloodPressure.diastolic.trim().toInt()
 
     return when {
       systolicNumber < 70 -> ERROR_SYSTOLIC_TOO_LOW
@@ -191,16 +183,5 @@ class BloodPressureEntrySheetController @Inject constructor(
       systolicNumber < diastolicNumber -> ERROR_SYSTOLIC_LESS_THAN_DIASTOLIC
       else -> SUCCESS
     }
-  }
-
-  enum class Validation {
-    SUCCESS,
-    ERROR_SYSTOLIC_EMPTY,
-    ERROR_DIASTOLIC_EMPTY,
-    ERROR_SYSTOLIC_TOO_HIGH,
-    ERROR_SYSTOLIC_TOO_LOW,
-    ERROR_DIASTOLIC_TOO_HIGH,
-    ERROR_DIASTOLIC_TOO_LOW,
-    ERROR_SYSTOLIC_LESS_THAN_DIASTOLIC
   }
 }
