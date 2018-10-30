@@ -129,6 +129,10 @@
     <item name="android:textColor">@color/red1</item>
   </style>
 
+  <style name="Clinic.V2.TextAppearance.Body2Left.White72">
+    <item name="android:textColor">@color/white72</item>
+  </style>
+
   <style name="Clinic.V2.TextAppearance.Body2Left.Numeric">
     <item name="android:letterSpacing" tools:ignore="NewApi">0.05</item>
   </style>
@@ -324,5 +328,17 @@
     <item name="android:textSize">@dimen/textsize_14</item>
     <item name="android:visibility">gone</item>
     <item name="android:layout_marginTop">@dimen/spacing_4</item>
+  </style>
+
+  <style name="Clinic.V2.TextAppearance.PatientSummary" />
+
+  <style name="Clinic.V2.TextAppearance.PatientSummary.PatientName">
+    <item name="android:textSize">@dimen/textsize_20</item>
+    <item name="android:fontFamily">sans-serif-medium</item>
+    <item name="android:textStyle">normal</item>
+    <item name="android:textColor">@color/white100</item>
+    <item name="android:letterSpacing">0.01</item>
+    <item name="android:lineSpacingExtra">8sp</item>
+    <item name="android:maxLines">1</item>
   </style>
 </resources>
